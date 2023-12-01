@@ -8,12 +8,10 @@ import android.util.Log;
 import com.mapbox.mapboxsdk.location.engine.LocationEngine;
 import com.mapbox.mapboxsdk.location.engine.LocationEngineCallback;
 
-/*
-import com.mapbox.android.core.location.LocationEngineListener;
-import com.mapbox.android.core.location.LocationEnginePriority;
-*/
+import com.mapbox.mapboxsdk.location.engine.MapboxFusedLocationEngineImpl;
+import com.mapbox.mapboxsdk.location.engine.LocationEngineProxy;
+import com.mapbox.mapboxsdk.location.engine.LocationEngineDefault;
 
-import com.mapbox.mapboxsdk.location.engine.LocationEngineProvider;
 import com.mapbox.mapboxsdk.location.engine.LocationEngineRequest;
 import com.mapbox.mapboxsdk.location.engine.LocationEngineResult;
 import com.mapbox.mapboxsdk.location.permissions.PermissionsManager;
@@ -23,9 +21,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
+
 /**
  * Created by nickitaliano on 12/12/17.
  */
+// Remove exxesive logging after testing. 
 
 @SuppressWarnings({"MissingPermission"})
 public class LocationManager implements LocationEngineCallback<LocationEngineResult> {
@@ -63,7 +63,12 @@ public class LocationManager implements LocationEngineCallback<LocationEngineRes
 
     }
     private void buildEngineRequest() {
-        locationEngine = LocationEngineProvider.getBestLocationEngine(this.context.getApplicationContext());
+        try {
+            locationEngine = new LocationEngineProxy<>(new MapboxFusedLocationEngineImpl(context.getApplicationContext()));
+            Log.d(LOG_TAG, "Location Engine created successfully.");
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "Error creating Location Engine: " + e.getMessage());
+        }
         locationEngineRequest = new LocationEngineRequest.Builder(DEFAULT_INTERVAL_MILLIS)
                 .setFastestInterval(DEFAULT_FASTEST_INTERVAL_MILLIS)
                 .setPriority(LocationEngineRequest.PRIORITY_HIGH_ACCURACY)
@@ -102,13 +107,20 @@ public class LocationManager implements LocationEngineCallback<LocationEngineRes
                 this,
                 Looper.getMainLooper()
         );
-        isActive = true;
+        try {
+            locationEngine.requestLocationUpdates(locationEngineRequest, this, Looper.getMainLooper());
+            isActive = true;
+            Log.d(LOG_TAG, "Location updates enabled.");
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "Error enabling location updates: " + e.getMessage());
+        }
     }
 
 
     public void disable() {
         locationEngine.removeLocationUpdates(this);
         isActive = false;
+        Log.d(LOG_TAG, "Location updates disabled");
     }
 
     public void dispose() {
@@ -140,7 +152,7 @@ public class LocationManager implements LocationEngineCallback<LocationEngineRes
             locationEngine.getLastLocation(callback);
         }
         catch(Exception exception) {
-            Log.w(LOG_TAG, exception);
+            Log.w(LOG_TAG, "location lastknown " + exception);
             callback.onFailure(exception);
         }
     }
@@ -154,15 +166,21 @@ public class LocationManager implements LocationEngineCallback<LocationEngineRes
         for (OnUserLocationChange listener : listeners) {
             listener.onLocationChange(location);
         }
+        Log.d(LOG_TAG, "Location changed: " + location.getLatitude() + ", " + location.getLongitude());
     }
 
     @Override
     public void onFailure(Exception exception) {
-        // FMTODO handle this.
+        Log.e(LOG_TAG, "LocationEngine failure: ", exception);
     }
 
     @Override
     public void onSuccess(LocationEngineResult result) {
-        onLocationChanged(result.getLastLocation());
+        try {
+            onLocationChanged(result.getLastLocation());
+            Log.d(LOG_TAG, "LocationEngine success: " + result.getLastLocation().toString());
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "Error processing location update: " + e.getMessage());
+        }
     }
 }

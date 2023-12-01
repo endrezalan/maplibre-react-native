@@ -33,7 +33,7 @@ dependencies {
     implementation("com.facebook.react:react-android")
 
     // MapLibre SDK
-    implementation "org.maplibre.gl:android-sdk:9.6.0"
+    implementation "org.maplibre.gl:android-sdk:10.2.0"
     implementation "org.maplibre.gl:android-sdk-turf:5.9.0"
 
     // Dependencies
